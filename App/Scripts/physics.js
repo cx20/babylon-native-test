@@ -1,6 +1,7 @@
 // =============================================================
-// 物理演算サンプル: カラフルなボックスが床に落下
-// Cannon.js (pure JS) + BABYLON.PhysicsImpostor を使用
+// Physics sample: colorful boxes falling on a floor
+// Uses Cannon.js (pure JS) + BABYLON.PhysicsImpostor (Physics v1)
+// Compatible with both Chakra and V8 builds.
 // =============================================================
 
 const _t0 = Date.now();
@@ -8,17 +9,16 @@ function perfLog(label) {
     BABYLON.Tools.Log("[PERF JS] " + (Date.now() - _t0) + " ms  " + label);
 }
 
-// --- 定数: createScene() より前に宣言する ---
 const BOX_COUNT = 150;
 const PALETTE = [
-    new BABYLON.Color3(1.00, 0.42, 0.42),  // コーラルレッド
-    new BABYLON.Color3(0.31, 0.80, 0.77),  // ティール
-    new BABYLON.Color3(1.00, 0.90, 0.27),  // ゴールデンイエロー
-    new BABYLON.Color3(0.61, 0.36, 0.90),  // パープル
-    new BABYLON.Color3(0.97, 0.50, 0.00),  // オレンジ
-    new BABYLON.Color3(0.26, 0.38, 0.93),  // ブルー
-    new BABYLON.Color3(0.18, 0.78, 0.33),  // グリーン
-    new BABYLON.Color3(0.97, 0.15, 0.52),  // ピンク
+    new BABYLON.Color3(1.00, 0.42, 0.42),  // coral red
+    new BABYLON.Color3(0.31, 0.80, 0.77),  // teal
+    new BABYLON.Color3(1.00, 0.90, 0.27),  // golden yellow
+    new BABYLON.Color3(0.61, 0.36, 0.90),  // purple
+    new BABYLON.Color3(0.97, 0.50, 0.00),  // orange
+    new BABYLON.Color3(0.26, 0.38, 0.93),  // blue
+    new BABYLON.Color3(0.18, 0.78, 0.33),  // green
+    new BABYLON.Color3(0.97, 0.15, 0.52),  // pink
 ];
 
 perfLog("Script start");
@@ -39,9 +39,7 @@ function createScene() {
     const scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0.08, 0.08, 0.12, 1.0);
 
-    // -------------------------------------------------------
-    // カメラ
-    // -------------------------------------------------------
+    // Camera
     const camera = new BABYLON.ArcRotateCamera(
         "cam", -Math.PI / 4, Math.PI / 3.5, 40,
         new BABYLON.Vector3(0, 3, 0), scene
@@ -53,9 +51,7 @@ function createScene() {
     camera.upperBetaLimit   = Math.PI / 2 - 0.05;
     camera.wheelPrecision   = 3;
 
-    // -------------------------------------------------------
-    // ライト
-    // -------------------------------------------------------
+    // Lights
     const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
     hemi.intensity   = 0.5;
     hemi.groundColor = new BABYLON.Color3(0.1, 0.1, 0.15);
@@ -64,18 +60,14 @@ function createScene() {
     dir.intensity = 0.8;
     dir.diffuse   = new BABYLON.Color3(1.0, 0.95, 0.85);
 
-    // -------------------------------------------------------
-    // 物理エンジン (Cannon.js)
-    // -------------------------------------------------------
+    // Physics engine (Cannon.js)
     scene.enablePhysics(
         new BABYLON.Vector3(0, -9.81, 0),
         new BABYLON.CannonJSPlugin(true, 10, CANNON)
     );
     perfLog("Physics enabled (Cannon.js)");
 
-    // -------------------------------------------------------
-    // 床
-    // -------------------------------------------------------
+    // Floor (static)
     const ground = BABYLON.MeshBuilder.CreateBox(
         "ground", { width: 40, height: 0.5, depth: 40 }, scene
     );
@@ -90,9 +82,7 @@ function createScene() {
         scene
     );
 
-    // -------------------------------------------------------
-    // カラフルなボックス (ランダムな高さから落下)
-    // -------------------------------------------------------
+    // Colorful boxes dropped from random heights
     for (var i = 0; i < BOX_COUNT; i++) {
         var w = 0.5 + Math.random() * 1.0;
         var h = 0.5 + Math.random() * 1.2;
@@ -125,9 +115,6 @@ function createScene() {
     }
     perfLog("Boxes created: " + BOX_COUNT);
 
-    // -------------------------------------------------------
-    // 初回フレーム計測
-    // -------------------------------------------------------
     var firstFrame = true;
     scene.registerAfterRender(function() {
         if (firstFrame) {

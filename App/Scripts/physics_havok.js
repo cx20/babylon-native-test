@@ -1,7 +1,14 @@
 // =============================================================
-// 物理演算サンプル (Physics v2 / Havok) - V8 ビルド向け
-// NativeEngine を先に起動してイベントループを回し、
-// HavokPhysics の Promise を解決させる
+// Physics sample: colorful boxes falling on a floor
+// Uses Havok Physics v2 (PhysicsAggregate) — requires V8 build.
+//
+// Babylon Native V8 quirks worked around here:
+//   1. NativeEngine must be started before HavokPhysics() so the
+//      render loop pumps the JS event loop for Promise resolution.
+//   2. WebAssembly.instantiate is patched to synchronous
+//      (new WebAssembly.Module + Instance) because async WASM
+//      compilation Promises never resolve without explicit
+//      microtask draining in this embedding.
 // =============================================================
 
 var _t0 = Date.now();
@@ -23,9 +30,6 @@ var PALETTE = [
 
 perfLog("Script start");
 
-// -------------------------------------------------------
-// base64 → ArrayBuffer
-// -------------------------------------------------------
 function base64ToArrayBuffer(b64) {
     var binaryString = atob(b64);
     var bytes = new Uint8Array(binaryString.length);
@@ -42,10 +46,8 @@ if (typeof WebAssembly === "undefined") {
     var wasmBuffer = base64ToArrayBuffer(HAVOK_WASM_BASE64);
     perfLog("WASM decoded (" + Math.round(wasmBuffer.byteLength / 1024) + " KB)");
 
-    // -------------------------------------------------------
-    // NativeEngine + プレースホルダーシーンを先に起動
-    // → レンダーループが回ることで Havok Promise が解決できる
-    // -------------------------------------------------------
+    // Start NativeEngine + placeholder scene first so the render loop
+    // pumps the event loop, allowing the HavokPhysics Promise to resolve.
     var engine = new BABYLON.NativeEngine();
     perfLog("NativeEngine created");
 
@@ -64,9 +66,11 @@ if (typeof WebAssembly === "undefined") {
     });
     perfLog("Render loop started - waiting for Havok init...");
 
-    // WebAssembly.instantiate を同期版にパッチ
-    // Babylon Native の V8 ではバックグラウンドコンパイルの Promise が
-    // 解決されないため、同期 API (new WebAssembly.Module / Instance) に置き換える
+    // Patch WebAssembly.instantiate to use the synchronous API.
+    // In Babylon Native V8, background WASM compilation Promises do not
+    // resolve because the microtask queue is only drained at render frame
+    // boundaries. Using new WebAssembly.Module() + Instance() synchronously
+    // and wrapping in Promise.resolve() lets the .then() fire on the next frame.
     (function () {
         var orig = WebAssembly.instantiate;
         WebAssembly.instantiate = function (source, imports) {
@@ -103,7 +107,7 @@ function createScene(engine, havok) {
     var scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0.08, 0.08, 0.12, 1.0);
 
-    // カメラ
+    // Camera
     var camera = new BABYLON.ArcRotateCamera(
         "cam", -Math.PI / 4, Math.PI / 3.5, 40,
         new BABYLON.Vector3(0, 3, 0), scene
@@ -113,7 +117,7 @@ function createScene(engine, havok) {
     camera.upperRadiusLimit = 100;
     camera.wheelPrecision = 3;
 
-    // ライト
+    // Lights
     var hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
     hemi.intensity = 0.5;
     hemi.groundColor = new BABYLON.Color3(0.1, 0.1, 0.15);
@@ -127,7 +131,7 @@ function createScene(engine, havok) {
     scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), hk);
     perfLog("Physics v2 (HavokPlugin) enabled");
 
-    // 床 (static, mass=0)
+    // Floor (static, mass=0)
     var ground = BABYLON.MeshBuilder.CreateBox(
         "ground", { width: 40, height: 0.5, depth: 40 }, scene
     );
@@ -142,7 +146,7 @@ function createScene(engine, havok) {
         scene
     );
 
-    // カラフルなボックス (dynamic, mass=1)
+    // Colorful boxes (dynamic, mass=1)
     for (var i = 0; i < BOX_COUNT; i++) {
         var w = 0.5 + Math.random() * 1.0;
         var h = 0.5 + Math.random() * 1.2;

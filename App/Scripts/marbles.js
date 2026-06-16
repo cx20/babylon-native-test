@@ -1,6 +1,14 @@
 // =============================================================
-// Marbles - Babylon Native 移植版
-// 元: webgl-physics-examples/examples/babylonjs/havok/marbles/index.js
+// Marbles — Babylon Native port
+// Original: webgl-physics-examples/examples/babylonjs/havok/marbles/index.js
+//
+// Changes from the browser version:
+//   - new BABYLON.NativeEngine() instead of new BABYLON.Engine(canvas)
+//   - camera.attachControl(true) — no canvas argument needed
+//   - HavokPhysics loaded from base64-embedded WASM (no network fetch)
+//   - WebAssembly.instantiate patched to synchronous for V8 embedding
+//   - NativeEngine started before HavokPhysics() to pump the event loop
+//   - window / document / DOM APIs removed
 // =============================================================
 
 var _t0 = Date.now();
@@ -28,6 +36,8 @@ if (typeof WebAssembly === "undefined") {
     var wasmBuffer = base64ToArrayBuffer(HAVOK_WASM_BASE64);
     perfLog("WASM decoded (" + Math.round(wasmBuffer.byteLength / 1024) + " KB)");
 
+    // Start NativeEngine + placeholder scene first so the render loop
+    // pumps the event loop, allowing the HavokPhysics Promise to resolve.
     var engine = new BABYLON.NativeEngine();
     perfLog("NativeEngine created");
 
@@ -46,7 +56,11 @@ if (typeof WebAssembly === "undefined") {
     });
     perfLog("Render loop started - waiting for Havok init...");
 
-    // WebAssembly.instantiate を同期版にパッチ (Babylon Native V8 の非同期 Promise 問題を回避)
+    // Patch WebAssembly.instantiate to use the synchronous API.
+    // In Babylon Native V8, background WASM compilation Promises do not
+    // resolve because the microtask queue is only drained at render frame
+    // boundaries. Using new WebAssembly.Module() + Instance() synchronously
+    // and wrapping in Promise.resolve() lets the .then() fire on the next frame.
     (function () {
         var orig = WebAssembly.instantiate;
         WebAssembly.instantiate = function (source, imports) {
@@ -87,7 +101,7 @@ function createScene(engine, havok) {
     scene.enablePhysics(new BABYLON.Vector3(0, -9.8, 0), hk);
     perfLog("HavokPlugin enabled");
 
-    // カメラ (3 分割ビューポート)
+    // Three-camera split viewport (matches original browser demo)
     var camera1 = new BABYLON.ArcRotateCamera("camera1", 0, Math.PI / 180 * 60, 30, BABYLON.Vector3.Zero(), scene);
     camera1.setTarget(BABYLON.Vector3.Zero());
     camera1.attachControl(true);
@@ -95,18 +109,18 @@ function createScene(engine, havok) {
     var camera2 = new BABYLON.ArcRotateCamera("camera2", 0, 1, 10, BABYLON.Vector3.Zero(), scene);
     var camera3 = new BABYLON.ArcRotateCamera("camera3", 0, 1, 10, BABYLON.Vector3.Zero(), scene);
 
-    camera1.viewport = new BABYLON.Viewport(0.4, 0.0, 0.6, 1.0); // 右 60%
-    camera2.viewport = new BABYLON.Viewport(0.0, 0.0, 0.4, 0.5); // 左下 40%x50%
-    camera3.viewport = new BABYLON.Viewport(0.0, 0.5, 0.4, 0.5); // 左上 40%x50%
+    camera1.viewport = new BABYLON.Viewport(0.4, 0.0, 0.6, 1.0); // right 60%
+    camera2.viewport = new BABYLON.Viewport(0.0, 0.0, 0.4, 0.5); // bottom-left 40x50%
+    camera3.viewport = new BABYLON.Viewport(0.0, 0.5, 0.4, 0.5); // top-left 40x50%
     scene.activeCameras.push(camera1);
     scene.activeCameras.push(camera2);
     scene.activeCameras.push(camera3);
 
-    // 環境テクスチャ + スカイボックス
+    // Environment texture + skybox
     var cubeTexture = new BABYLON.CubeTexture("app:///Scripts/textures/papermillSpecularHDR.env", scene);
     scene.createDefaultSkybox(cubeTexture, true);
 
-    // ライト
+    // Lights
     new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), scene);
 
     var light2 = new BABYLON.DirectionalLight("light2", new BABYLON.Vector3(0, 1, 0), scene);
@@ -115,7 +129,7 @@ function createScene(engine, havok) {
     light2.intensity = 3;
     var shadow = new BABYLON.ShadowGenerator(512, light2);
 
-    // 地面 (PBR + 草テクスチャ)
+    // Ground (PBR + grass texture)
     var matGround = new BABYLON.PBRMetallicRoughnessMaterial("ground", scene);
     var grassTex = new BABYLON.Texture("app:///Scripts/textures/grass.jpg", scene);
     grassTex.uScale = grassTex.vScale = 2;
@@ -131,7 +145,7 @@ function createScene(engine, havok) {
         { mass: 0, friction: 0.2, restitution: 0.3 }, scene
     );
 
-    // GLTF スフィアモデルの読み込み
+    // Load GLTF sphere model
     var sphereMeshes = [];
     var cameraTarget = null;
 
@@ -139,14 +153,14 @@ function createScene(engine, havok) {
         .then(function (result) {
             perfLog("GLTF loaded: " + result.meshes.length + " meshes");
 
-            // ラベル (Plane) を非表示に
+            // Hide label planes
             result.meshes.forEach(function (m) {
                 if (m.name.lastIndexOf("Plane") !== -1) {
                     m.isVisible = false;
                 }
             });
 
-            // スフィアに物理を付与
+            // Add physics to sphere meshes
             sphereMeshes = result.meshes.filter(function (m) {
                 return m.name.indexOf("Sphere") !== -1;
             });
@@ -171,14 +185,13 @@ function createScene(engine, havok) {
         })
         .catch(function (err) {
             BABYLON.Tools.Error("[Marbles] GLTF load failed: " + err);
-            // フォールバック: プリミティブ球
+            // Fallback to primitive spheres if GLTF loading fails
             createFallbackSpheres(scene, shadow, sphereMeshes, function (target) {
                 cameraTarget = target;
                 camera2.parent = cameraTarget;
             }, havok);
         });
 
-    // ランダム位置生成
     var randomNumber = function (min, max) {
         if (min === max) return min;
         return Math.random() * (max - min) + min;
@@ -191,7 +204,7 @@ function createScene(engine, havok) {
         );
     };
 
-    // 落下した球を上からリスポーン + カメラ回転
+    // Respawn fallen spheres from above + rotate main camera
     scene.onBeforeRenderObservable.add(function () {
         sphereMeshes.forEach(function (mesh) {
             if (mesh.aggregate && mesh.position.y < -100 * PHYSICS_SCALE) {
@@ -220,7 +233,7 @@ function createScene(engine, havok) {
     return scene;
 }
 
-// GLTF 読み込み失敗時のフォールバック
+// Fallback: primitive PBR spheres used when GLTF loading fails
 function createFallbackSpheres(scene, shadow, sphereMeshes, onReady, havok) {
     perfLog("Fallback: creating primitive spheres");
     var colors = [

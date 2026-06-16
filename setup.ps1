@@ -1,14 +1,14 @@
-# setup.ps1 - Babylon Native Hello World セットアップスクリプト
+# setup.ps1 - Babylon Native Hello World setup script
 #
-# 実行方法:
-#   PowerShell を管理者で開き、このスクリプトのディレクトリで:
+# Usage:
+#   Open PowerShell as Administrator, navigate to this script's directory:
 #     Set-ExecutionPolicy Bypass -Scope Process -Force
 #     .\setup.ps1
 #
-# オプション:
-#   -SkipClone   BabylonNative のクローンをスキップ (既にある場合)
-#   -SkipNpm     npm install をスキップ
-#   -SkipCMake   CMake 実行をスキップ (ファイルのコピーのみ)
+# Options:
+#   -SkipClone   Skip cloning BabylonNative (if already cloned)
+#   -SkipNpm     Skip npm install
+#   -SkipCMake   Skip CMake generation (only copy files)
 
 param(
     [switch]$SkipClone,
@@ -30,15 +30,15 @@ function Write-Step([string]$msg) {
 
 function Check-Command([string]$cmd) {
     if (-not (Get-Command $cmd -ErrorAction SilentlyContinue)) {
-        Write-Error "必要なツールが見つかりません: $cmd`nインストールしてから再実行してください。"
+        Write-Error "Required tool not found: $cmd`nPlease install it and run this script again."
     }
     Write-Host "  [OK] $cmd" -ForegroundColor Green
 }
 
 # ---------------------------------------------------------------
-# 1. 前提条件チェック
+# 1. Prerequisites check
 # ---------------------------------------------------------------
-Write-Step "前提条件の確認"
+Write-Step "Checking prerequisites"
 Check-Command "git"
 Check-Command "node"
 Check-Command "npm"
@@ -55,59 +55,59 @@ if (Test-Path $vswhere) {
         $cmakeBin = Join-Path $vs.installationPath "Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
         if (Test-Path $cmakeBin) {
             $cmakeFromVS = $cmakeBin
-            Write-Host "  [OK] cmake (VS 付属): $cmakeBin" -ForegroundColor Green
+            Write-Host "  [OK] cmake (bundled with VS): $cmakeBin" -ForegroundColor Green
         }
     } else {
-        Write-Warning "Visual Studio (C++ ツール付き) が見つかりません。ビルド時にエラーが出る可能性があります。"
+        Write-Warning "Visual Studio with C++ tools not found. Build may fail."
     }
 } else {
-    Write-Warning "vswhere が見つかりません。Visual Studio がインストールされているか確認してください。"
+    Write-Warning "vswhere not found. Please verify that Visual Studio is installed."
 }
 
-# cmake コマンドの解決: PATH 上になければ VS 付属を使用
-$cmakeCmd = if (Get-Command "cmake" -ErrorAction SilentlyContinue) { "cmake" } elseif ($cmakeFromVS) { $cmakeFromVS } else { Write-Error "cmake が見つかりません。" }
+# Resolve cmake command: prefer PATH, fall back to VS-bundled cmake
+$cmakeCmd = if (Get-Command "cmake" -ErrorAction SilentlyContinue) { "cmake" } elseif ($cmakeFromVS) { $cmakeFromVS } else { Write-Error "cmake not found." }
 
 # ---------------------------------------------------------------
-# 2. BabylonNative リポジトリのクローン
+# 2. Clone BabylonNative repository
 # ---------------------------------------------------------------
-Write-Step "BabylonNative のクローン"
+Write-Step "Cloning BabylonNative"
 if ($SkipClone) {
-    Write-Host "  -SkipClone が指定されたためスキップします。" -ForegroundColor Yellow
+    Write-Host "  -SkipClone specified, skipping." -ForegroundColor Yellow
 } elseif (Test-Path $BabylonDir) {
-    Write-Host "  $BabylonDir は既に存在します。クローンをスキップします。" -ForegroundColor Yellow
-    Write-Host "  (再クローンするにはディレクトリを削除してください)" -ForegroundColor Gray
+    Write-Host "  $BabylonDir already exists. Skipping clone." -ForegroundColor Yellow
+    Write-Host "  (Delete the directory to re-clone)" -ForegroundColor Gray
 } else {
-    Write-Host "  サブモジュール含め約 1~3 GB のクローンになります。時間がかかります..." -ForegroundColor Yellow
+    Write-Host "  Cloning with submodules (~1-3 GB). This may take a while..." -ForegroundColor Yellow
     git clone --recurse-submodules https://github.com/BabylonJS/BabylonNative.git $BabylonDir
-    if ($LASTEXITCODE -ne 0) { Write-Error "git clone に失敗しました。" }
-    Write-Host "  クローン完了。" -ForegroundColor Green
+    if ($LASTEXITCODE -ne 0) { Write-Error "git clone failed." }
+    Write-Host "  Clone complete." -ForegroundColor Green
 }
 
 # ---------------------------------------------------------------
-# 3. npm install (Babylon.js パッケージの取得)
+# 3. npm install (fetch Babylon.js packages)
 # ---------------------------------------------------------------
-Write-Step "npm パッケージのインストール"
+Write-Step "Installing npm packages"
 if ($SkipNpm) {
-    Write-Host "  -SkipNpm が指定されたためスキップします。" -ForegroundColor Yellow
+    Write-Host "  -SkipNpm specified, skipping." -ForegroundColor Yellow
 } else {
     $appsDir = Join-Path $BabylonDir "Apps"
     if (-not (Test-Path $appsDir)) {
-        Write-Error "Apps ディレクトリが見つかりません: $appsDir`nBabylonNative が正しくクローンされているか確認してください。"
+        Write-Error "Apps directory not found: $appsDir`nPlease verify that BabylonNative was cloned correctly."
     }
     Push-Location $appsDir
     npm install
-    if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Error "npm install に失敗しました。" }
-    # 物理演算サンプル用 Cannon.js
+    if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Error "npm install failed." }
+    # Cannon.js for the Physics v1 sample
     npm install cannon
-    if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Error "npm install cannon に失敗しました。" }
+    if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Error "npm install cannon failed." }
     Pop-Location
-    Write-Host "  npm install 完了。" -ForegroundColor Green
+    Write-Host "  npm install complete." -ForegroundColor Green
 }
 
 # ---------------------------------------------------------------
-# 4. HelloWorld ファイルを BabylonNative/Apps/ にコピー
+# 4. Copy HelloWorld files into BabylonNative/Apps/
 # ---------------------------------------------------------------
-Write-Step "HelloWorld アプリファイルのコピー"
+Write-Step "Copying HelloWorld app files"
 if (-not (Test-Path $AppDest)) {
     New-Item -ItemType Directory -Path $AppDest | Out-Null
 }
@@ -115,11 +115,11 @@ Copy-Item -Path "$AppSrc\*" -Destination $AppDest -Recurse -Force
 Write-Host "  $AppSrc  ->  $AppDest" -ForegroundColor Green
 
 # ---------------------------------------------------------------
-# 5. Apps/CMakeLists.txt に HelloWorld を追加
+# 5. Register HelloWorld in Apps/CMakeLists.txt
 # ---------------------------------------------------------------
-Write-Step "Apps/CMakeLists.txt のパッチ"
+Write-Step "Patching Apps/CMakeLists.txt"
 if (-not (Test-Path $AppsCMake)) {
-    Write-Error "Apps/CMakeLists.txt が見つかりません: $AppsCMake"
+    Write-Error "Apps/CMakeLists.txt not found: $AppsCMake"
 }
 $cmakeContent = Get-Content $AppsCMake -Raw
 $entry = @"
@@ -129,57 +129,55 @@ if(WIN32 AND NOT WINDOWS_STORE)
 endif()
 "@
 if ($cmakeContent -match "add_subdirectory\(HelloWorld\)") {
-    Write-Host "  HelloWorld は既に登録されています。スキップします。" -ForegroundColor Yellow
+    Write-Host "  HelloWorld is already registered. Skipping." -ForegroundColor Yellow
 } else {
-    # ファイル末尾に追記
+    # Append to end of file
     Add-Content -Path $AppsCMake -Value $entry
-    Write-Host "  Apps/CMakeLists.txt に HelloWorld を追加しました。" -ForegroundColor Green
+    Write-Host "  Added HelloWorld to Apps/CMakeLists.txt." -ForegroundColor Green
 }
 
 # ---------------------------------------------------------------
-# 6. CMake でビルドシステムを生成
+# 6. Generate build system with CMake
 # ---------------------------------------------------------------
-Write-Step "CMake ビルドシステムの生成"
+Write-Step "Generating CMake build system"
 if ($SkipCMake) {
-    Write-Host "  -SkipCMake が指定されたためスキップします。" -ForegroundColor Yellow
+    Write-Host "  -SkipCMake specified, skipping." -ForegroundColor Yellow
 } else {
-    # 日本語 Windows (CP932) 環境でのビルドエラー対策:
-    # BabylonNative のソースは UTF-8 だが MSVC のデフォルトコードページが CP932 のため
-    # C4819 警告 -> /WX でエラー昇格する。/utf-8 で解決する。
-    # VS デフォルトフラグ (/DWIN32 /D_WINDOWS /W3 /GR /EHsc) に /utf-8 を追加して渡す。
+    # Pass /utf-8 to work around MSVC C4819 warnings caused by UTF-8 source files
+    # on non-UTF-8 system locales (e.g. CP932 on Japanese Windows).
     $cxxFlags = "/DWIN32 /D_WINDOWS /W3 /GR /EHsc /utf-8"
     $cFlags   = "/DWIN32 /D_WINDOWS /W3 /utf-8"
     Write-Host "  $cmakeCmd -B $BuildDir $BabylonDir" -ForegroundColor Gray
     & $cmakeCmd -B $BuildDir $BabylonDir `
         "-DCMAKE_CXX_FLAGS=$cxxFlags" `
         "-DCMAKE_C_FLAGS=$cFlags"
-    if ($LASTEXITCODE -ne 0) { Write-Error "CMake の生成に失敗しました。" }
-    Write-Host "  CMake 完了。" -ForegroundColor Green
+    if ($LASTEXITCODE -ne 0) { Write-Error "CMake generation failed." }
+    Write-Host "  CMake complete." -ForegroundColor Green
 }
 
 # ---------------------------------------------------------------
-# 7. 完了メッセージ
+# 7. Done
 # ---------------------------------------------------------------
 Write-Host @"
 
 ======================================================
-  セットアップ完了!
+  Setup complete!
 ======================================================
 
-Visual Studio でビルドして実行:
+Build and run in Visual Studio:
   start "$BuildDir\BabylonNative.sln"
-  -> ソリューションを開き HelloWorld をスタートアップに設定してビルド
+  -> Open the solution, set HelloWorld as startup project, then build
 
-コマンドラインでビルド:
+Build from command line:
   cmake --build "$BuildDir" --config Debug --target HelloWorld
 
-実行ファイルの場所:
+Executable location:
   $BuildDir\Apps\HelloWorld\Debug\HelloWorld.exe
 
-ソースファイル:
-  App\Scripts\hello_world.js  <- Babylon.js シーン (ここを編集)
-  App\Win32\main.cpp          <- Win32 ホストアプリ
-  App\CMakeLists.txt          <- CMake 設定
+Source files:
+  App\Scripts\hello_world.js  <- Babylon.js scene (edit this)
+  App\Win32\main.cpp          <- Win32 host application
+  App\CMakeLists.txt          <- CMake configuration
 
-app:///Scripts/ は実行ファイルと同じディレクトリの Scripts/ に対応します。
+app:///Scripts/ maps to the Scripts/ directory next to the executable.
 "@ -ForegroundColor Cyan

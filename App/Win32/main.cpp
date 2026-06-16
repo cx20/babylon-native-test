@@ -12,7 +12,7 @@
 #include <string>
 
 // ---------------------------------------------------------------------------
-// パフォーマンス計測
+// Performance timing
 // ---------------------------------------------------------------------------
 static auto g_tStart = std::chrono::steady_clock::now();
 
@@ -39,26 +39,24 @@ static void LoadScripts()
     g_runtime->LoadScript("app:///Scripts/babylon.max.js");
     g_runtime->LoadScript("app:///Scripts/babylon.gui.js");
 
-    // --- シーン選択: 使いたいブロックだけ有効化 ---
+    // --- Scene selection: enable only one block at a time ---
 
-    // --- シーン選択: 使いたいブロックだけ有効化 ---
-
-    // [A] Marbles (Havok + GLTF スフィア) ← 現在有効
+    // [A] Marbles (Havok Physics v2 + GLTF spheres) — currently active
     g_runtime->LoadScript("app:///Scripts/babylonjs.loaders.js");
     g_runtime->LoadScript("app:///Scripts/HavokPhysics_compat.js");
     g_runtime->LoadScript("app:///Scripts/HavokPhysics_wasm_b64.js");
     g_runtime->LoadScript("app:///Scripts/marbles.js");
 
-    // [B] Physics v2 (Havok) ボックスサンプル
+    // [B] Physics v2 (Havok) — colorful box drop
     // g_runtime->LoadScript("app:///Scripts/HavokPhysics_compat.js");
     // g_runtime->LoadScript("app:///Scripts/HavokPhysics_wasm_b64.js");
     // g_runtime->LoadScript("app:///Scripts/physics_havok.js");
 
-    // [C] Physics v1 (Cannon.js) サンプル
+    // [C] Physics v1 (Cannon.js) — colorful box drop
     // g_runtime->LoadScript("app:///Scripts/cannon.js");
     // g_runtime->LoadScript("app:///Scripts/physics.js");
 
-    // [D] レイマーチングサンプル
+    // [D] Raymarching — organic life-form shader
     // g_runtime->LoadScript("app:///Scripts/raymarching.js");
 }
 
@@ -86,7 +84,7 @@ static void InitializeBabylon(HWND hWnd)
     LoadScripts();
     PerfLog("LoadScript() calls queued (async)");
 
-    // View attach: GPU デバイス初期化 + スクリプトキューを JS スレッドへ投入
+    // Attaching the View initializes the GPU device and starts script execution on the JS thread.
     g_view.emplace(*g_runtime, hWnd);
     PerfLog("View attached (GPU init done, scripts executing on JS thread)");
 
@@ -152,7 +150,6 @@ int APIENTRY wWinMain(
     _In_     LPWSTR    /*lpCmdLine*/,
     _In_     int       nCmdShow)
 {
-    // 計測開始はプロセス起動直後
     g_tStart = std::chrono::steady_clock::now();
     PerfLog("wWinMain start");
 
@@ -208,7 +205,7 @@ int APIENTRY wWinMain(
                 firstFrame = false;
             }
 
-            // 1 秒ごとにタイトルバーの FPS を更新
+            // Update FPS counter in title bar every second
             auto now = std::chrono::steady_clock::now();
             auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFpsTime).count();
             if (ms >= 1000)

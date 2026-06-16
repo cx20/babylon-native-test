@@ -1,11 +1,11 @@
 // ===================================================================
-// Enhanced Organic Life-Form Raymarching  (Babylon Native 版)
+// Enhanced Organic Life-Form Raymarching  (Babylon Native port)
 //
-// Playground 版からの変更点:
-//   - engine を new BABYLON.NativeEngine() で生成
+// Changes from the Playground version:
+//   - engine created with new BABYLON.NativeEngine()
 //   - camera.attachControl(canvas, true) -> attachControl(true)
-//   - scene.clearColor を Color4 に変更
-//   - export default を削除し engine.runRenderLoop を追加
+//   - scene.clearColor changed to Color4
+//   - removed export default; added engine.runRenderLoop
 // ===================================================================
 
 // ---------------------------------------------------------------------------
@@ -35,7 +35,7 @@ function createScene() {
     scene.clearColor = new BABYLON.Color4(0.0, 0.0, 0.0, 1.0);
 
     const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2.5, Math.PI / 2.2, 7.0, BABYLON.Vector3.Zero(), scene);
-    camera.attachControl(true); // Babylon Native: canvas 引数は不要
+    camera.attachControl(true); // Babylon Native: no canvas argument needed
     camera.minZ = 0.1;
     camera.wheelPrecision = 50;
 
