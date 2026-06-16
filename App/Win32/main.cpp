@@ -8,6 +8,7 @@
 
 #include <Windows.h>
 
+#include <chrono>
 #include <cstdio>
 #include <optional>
 #include <string>
@@ -133,6 +134,9 @@ int APIENTRY wWinMain(
     ::UpdateWindow(hWnd);
 
     MSG msg{};
+    int  frameCount = 0;
+    auto lastFpsTime = std::chrono::steady_clock::now();
+
     while (msg.message != WM_QUIT)
     {
         if (g_minimized)
@@ -146,6 +150,21 @@ int APIENTRY wWinMain(
         else
         {
             if (g_view) g_view->RenderFrame();
+            ++frameCount;
+
+            // 1 秒ごとにタイトルバーの FPS を更新
+            auto now = std::chrono::steady_clock::now();
+            auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFpsTime).count();
+            if (ms >= 1000)
+            {
+                float fps = frameCount * 1000.0f / static_cast<float>(ms);
+                wchar_t title[128];
+                swprintf_s(title, L"Babylon Native - Hello World  |  FPS: %.0f", fps);
+                ::SetWindowTextW(hWnd, title);
+                frameCount = 0;
+                lastFpsTime = now;
+            }
+
             if (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
             {
                 if (msg.message == WM_QUIT) break;
