@@ -1,0 +1,19 @@
+# BabylonNative はサブモジュールではなくセットアップスクリプトで取得するため除外
+BabylonNative/
+
+# ビルド成果物
+build/
+*.exe
+*.lib
+*.pdb
+*.obj
+*.ilk
+*.exp
+
+# エディタ
+.vs/
+.vscode/
+*.user
+
+# Node
+node_modules/
