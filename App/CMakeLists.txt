@@ -7,7 +7,8 @@ set(BABYLON_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js")
 
 set(SCRIPTS
-    "Scripts/hello_world.js")
+    "Scripts/hello_world.js"
+    "Scripts/raymarching.js")
 
 set(SOURCES
     "Win32/main.cpp")
