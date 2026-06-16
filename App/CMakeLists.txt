@@ -9,7 +9,8 @@ set(BABYLON_SCRIPTS
 
 set(SCRIPTS
     "Scripts/hello_world.js"
-    "Scripts/raymarching.js")
+    "Scripts/raymarching.js"
+    "Scripts/environment.env")
 
 set(SOURCES
     "Win32/main.cpp")

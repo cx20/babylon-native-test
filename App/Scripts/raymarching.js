@@ -28,7 +28,7 @@ function createScene() {
     autoRotate.idleRotationSpeed = 0.04;
     camera.addBehavior(autoRotate);
 
-    const hdrTexture = new BABYLON.CubeTexture("https://assets.babylonjs.com/textures/environment.env", scene);
+    const hdrTexture = new BABYLON.CubeTexture("app:///Scripts/environment.env", scene);
     scene.environmentTexture = hdrTexture;
     scene.environmentIntensity = 0.5;
     scene.createDefaultSkybox(hdrTexture, true, 1000, 0.25);
