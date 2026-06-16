@@ -4,7 +4,8 @@
 
 # Babylon.js core bundle (required); additional bundles can be appended.
 set(BABYLON_SCRIPTS
-    "../node_modules/babylonjs/babylon.max.js")
+    "../node_modules/babylonjs/babylon.max.js"
+    "../node_modules/babylonjs-gui/babylon.gui.js")
 
 set(SCRIPTS
     "Scripts/hello_world.js"

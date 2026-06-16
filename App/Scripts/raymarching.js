@@ -37,11 +37,27 @@ function createScene() {
     const material = createEnhancedOrganicMaterial(scene);
     box.material = material;
 
+    // FPS オーバーレイ
+    const ui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, scene);
+    const fpsText = new BABYLON.GUI.TextBlock("fps");
+    fpsText.text = "FPS: --";
+    fpsText.color = "white";
+    fpsText.fontSize = 20;
+    fpsText.fontFamily = "monospace";
+    fpsText.shadowColor = "black";
+    fpsText.shadowBlur = 4;
+    fpsText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    fpsText.verticalAlignment   = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+    fpsText.left = "12px";
+    fpsText.top  = "12px";
+    ui.addControl(fpsText);
+
     let time = 0;
     scene.registerBeforeRender(() => {
         time += 0.008;
         material.setFloat("time", time);
         material.setVector3("cameraPosition", camera.position);
+        fpsText.text = "FPS: " + Math.round(engine.getFps());
     });
 
     return scene;

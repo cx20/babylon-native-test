@@ -20,6 +20,7 @@ static void LoadScripts()
 {
     // Bootstrap Babylon.js core, then our scene script.
     g_runtime->LoadScript("app:///Scripts/babylon.max.js");
+    g_runtime->LoadScript("app:///Scripts/babylon.gui.js");
     g_runtime->LoadScript("app:///Scripts/raymarching.js");
 }
 
