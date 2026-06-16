@@ -44,7 +44,7 @@ function createScene() {
     camera.addBehavior(autoRotate);
 
     perfLog("Loading CubeTexture (environment.env)...");
-    const hdrTexture = new BABYLON.CubeTexture("app:///Scripts/environment.env", scene);
+    const hdrTexture = new BABYLON.CubeTexture("app:///Scripts/textures/environment.env", scene);
     hdrTexture.onLoadObservable.addOnce(() => {
         perfLog("CubeTexture loaded");
     });

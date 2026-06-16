@@ -41,16 +41,24 @@ static void LoadScripts()
 
     // --- シーン選択: 使いたいブロックだけ有効化 ---
 
-    // [A] Physics v2 (Havok) サンプル ← V8 ビルドで有効
+    // --- シーン選択: 使いたいブロックだけ有効化 ---
+
+    // [A] Marbles (Havok + GLTF スフィア) ← 現在有効
+    g_runtime->LoadScript("app:///Scripts/babylonjs.loaders.js");
     g_runtime->LoadScript("app:///Scripts/HavokPhysics_compat.js");
     g_runtime->LoadScript("app:///Scripts/HavokPhysics_wasm_b64.js");
-    g_runtime->LoadScript("app:///Scripts/physics_havok.js");
+    g_runtime->LoadScript("app:///Scripts/marbles.js");
 
-    // [B] Physics v1 (Cannon.js) サンプル
+    // [B] Physics v2 (Havok) ボックスサンプル
+    // g_runtime->LoadScript("app:///Scripts/HavokPhysics_compat.js");
+    // g_runtime->LoadScript("app:///Scripts/HavokPhysics_wasm_b64.js");
+    // g_runtime->LoadScript("app:///Scripts/physics_havok.js");
+
+    // [C] Physics v1 (Cannon.js) サンプル
     // g_runtime->LoadScript("app:///Scripts/cannon.js");
     // g_runtime->LoadScript("app:///Scripts/physics.js");
 
-    // [C] レイマーチングサンプル
+    // [D] レイマーチングサンプル
     // g_runtime->LoadScript("app:///Scripts/raymarching.js");
 }
 
