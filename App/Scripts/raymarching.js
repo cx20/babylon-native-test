@@ -44,8 +44,6 @@ function createScene() {
     fpsText.color = "white";
     fpsText.fontSize = 20;
     fpsText.fontFamily = "monospace";
-    fpsText.shadowColor = "black";
-    fpsText.shadowBlur = 4;
     fpsText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
     fpsText.verticalAlignment   = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
     fpsText.left = "12px";
