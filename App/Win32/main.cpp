@@ -1,6 +1,4 @@
 // Babylon Native Hello World - Win32 host
-// Creates a window, initializes Babylon::Embedding Runtime + View,
-// loads babylon.max.js and hello_world.js, then runs the render loop.
 
 #include <Babylon/Embedding/LogLevel.h>
 #include <Babylon/Embedding/Runtime.h>
@@ -13,21 +11,54 @@
 #include <optional>
 #include <string>
 
+// ---------------------------------------------------------------------------
+// パフォーマンス計測
+// ---------------------------------------------------------------------------
+static auto g_tStart = std::chrono::steady_clock::now();
+
+static long long ElapsedMs()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - g_tStart).count();
+}
+
+static void PerfLog(const char* label)
+{
+    printf("[PERF C++] %6lld ms  %s\n", ElapsedMs(), label);
+    fflush(stdout);
+}
+
+// ---------------------------------------------------------------------------
+
 static std::optional<Babylon::Embedding::Runtime> g_runtime;
 static std::optional<Babylon::Embedding::View>    g_view;
 static bool g_minimized = false;
 
 static void LoadScripts()
 {
-    // Bootstrap Babylon.js core, then our scene script.
     g_runtime->LoadScript("app:///Scripts/babylon.max.js");
     g_runtime->LoadScript("app:///Scripts/babylon.gui.js");
-    g_runtime->LoadScript("app:///Scripts/raymarching.js");
+
+    // --- シーン選択: 使いたいブロックだけ有効化 ---
+
+    // [A] Physics v2 (Havok) サンプル ← V8 ビルドで有効
+    g_runtime->LoadScript("app:///Scripts/HavokPhysics_compat.js");
+    g_runtime->LoadScript("app:///Scripts/HavokPhysics_wasm_b64.js");
+    g_runtime->LoadScript("app:///Scripts/physics_havok.js");
+
+    // [B] Physics v1 (Cannon.js) サンプル
+    // g_runtime->LoadScript("app:///Scripts/cannon.js");
+    // g_runtime->LoadScript("app:///Scripts/physics.js");
+
+    // [C] レイマーチングサンプル
+    // g_runtime->LoadScript("app:///Scripts/raymarching.js");
 }
 
 static void InitializeBabylon(HWND hWnd)
 {
     ::SetConsoleOutputCP(CP_UTF8);
+
+    PerfLog("InitializeBabylon start");
 
     Babylon::Embedding::RuntimeOptions opts{};
     opts.log = [](Babylon::Embedding::LogLevel /*level*/, std::string_view msg)
@@ -38,13 +69,18 @@ static void InitializeBabylon(HWND hWnd)
         line += '\n';
         ::OutputDebugStringA(line.c_str());
         std::fputs(line.c_str(), stdout);
+        fflush(stdout);
     };
 
     g_runtime.emplace(opts);
-    LoadScripts();
+    PerfLog("Runtime created (JS thread started)");
 
-    // Attach the View; this triggers GPU device init and script execution.
+    LoadScripts();
+    PerfLog("LoadScript() calls queued (async)");
+
+    // View attach: GPU デバイス初期化 + スクリプトキューを JS スレッドへ投入
     g_view.emplace(*g_runtime, hWnd);
+    PerfLog("View attached (GPU init done, scripts executing on JS thread)");
 
     RECT rect{};
     if (::GetClientRect(hWnd, &rect))
@@ -58,7 +94,6 @@ static void InitializeBabylon(HWND hWnd)
 
 static void Uninitialize()
 {
-    // Order matters: tear down View (unbinds surface) before Runtime (joins JS thread).
     g_view.reset();
     g_runtime.reset();
 }
@@ -109,6 +144,10 @@ int APIENTRY wWinMain(
     _In_     LPWSTR    /*lpCmdLine*/,
     _In_     int       nCmdShow)
 {
+    // 計測開始はプロセス起動直後
+    g_tStart = std::chrono::steady_clock::now();
+    PerfLog("wWinMain start");
+
     WNDCLASSEXW wcex{};
     wcex.cbSize        = sizeof(WNDCLASSEXW);
     wcex.style         = CS_HREDRAW | CS_VREDRAW;
@@ -128,14 +167,17 @@ int APIENTRY wWinMain(
         nullptr, nullptr, hInstance, nullptr);
     if (!hWnd) return -1;
 
+    PerfLog("Window created");
+
     InitializeBabylon(hWnd);
 
     ::ShowWindow(hWnd, nCmdShow);
     ::UpdateWindow(hWnd);
 
     MSG msg{};
-    int  frameCount = 0;
-    auto lastFpsTime = std::chrono::steady_clock::now();
+    int  frameCount   = 0;
+    bool firstFrame   = true;
+    auto lastFpsTime  = std::chrono::steady_clock::now();
 
     while (msg.message != WM_QUIT)
     {
@@ -152,6 +194,12 @@ int APIENTRY wWinMain(
             if (g_view) g_view->RenderFrame();
             ++frameCount;
 
+            if (firstFrame)
+            {
+                PerfLog("First RenderFrame() called");
+                firstFrame = false;
+            }
+
             // 1 秒ごとにタイトルバーの FPS を更新
             auto now = std::chrono::steady_clock::now();
             auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFpsTime).count();
@@ -161,7 +209,7 @@ int APIENTRY wWinMain(
                 wchar_t title[128];
                 swprintf_s(title, L"Babylon Native - Hello World  |  FPS: %.0f", fps);
                 ::SetWindowTextW(hWnd, title);
-                frameCount = 0;
+                frameCount  = 0;
                 lastFpsTime = now;
             }
 

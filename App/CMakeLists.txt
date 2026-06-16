@@ -5,12 +5,19 @@
 # Babylon.js core bundle (required); additional bundles can be appended.
 set(BABYLON_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs-gui/babylon.gui.js")
+    "../node_modules/babylonjs-gui/babylon.gui.js"
+    "../node_modules/cannon/build/cannon.js"
+    "../node_modules/@babylonjs/havok/lib/umd/HavokPhysics_umd.js"
+    "../node_modules/@babylonjs/havok/lib/umd/HavokPhysics.wasm")
 
 set(SCRIPTS
     "Scripts/hello_world.js"
     "Scripts/raymarching.js"
-    "Scripts/environment.env")
+    "Scripts/environment.env"
+    "Scripts/physics.js"
+    "Scripts/physics_havok.js"
+    "Scripts/HavokPhysics_wasm_b64.js"
+    "Scripts/HavokPhysics_compat.js")
 
 set(SOURCES
     "Win32/main.cpp")

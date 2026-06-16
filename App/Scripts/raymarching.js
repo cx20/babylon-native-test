@@ -8,8 +8,22 @@
 //   - export default を削除し engine.runRenderLoop を追加
 // ===================================================================
 
+// ---------------------------------------------------------------------------
+// JS-side performance timing
+// ---------------------------------------------------------------------------
+const _t0 = Date.now();
+function perfLog(label) {
+    BABYLON.Tools.Log("[PERF JS] " + (Date.now() - _t0) + " ms  " + label);
+}
+// ---------------------------------------------------------------------------
+
+perfLog("Script start");
+
 const engine = new BABYLON.NativeEngine();
+perfLog("NativeEngine created");
+
 const scene = createScene();
+perfLog("createScene() returned");
 
 engine.runRenderLoop(function () {
     scene.render();
@@ -17,6 +31,7 @@ engine.runRenderLoop(function () {
 
 function createScene() {
     const scene = new BABYLON.Scene(engine);
+    perfLog("Scene created");
     scene.clearColor = new BABYLON.Color4(0.0, 0.0, 0.0, 1.0);
 
     const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2.5, Math.PI / 2.2, 7.0, BABYLON.Vector3.Zero(), scene);
@@ -28,34 +43,40 @@ function createScene() {
     autoRotate.idleRotationSpeed = 0.04;
     camera.addBehavior(autoRotate);
 
+    perfLog("Loading CubeTexture (environment.env)...");
     const hdrTexture = new BABYLON.CubeTexture("app:///Scripts/environment.env", scene);
+    hdrTexture.onLoadObservable.addOnce(() => {
+        perfLog("CubeTexture loaded");
+    });
     scene.environmentTexture = hdrTexture;
     scene.environmentIntensity = 0.5;
     scene.createDefaultSkybox(hdrTexture, true, 1000, 0.25);
+    perfLog("Skybox created");
 
     const box = BABYLON.MeshBuilder.CreateBox("box", { size: 10.0 }, scene);
+    perfLog("createEnhancedOrganicMaterial start (GLSL compile)");
     const material = createEnhancedOrganicMaterial(scene);
+    perfLog("createEnhancedOrganicMaterial done");
     box.material = material;
 
-    // FPS オーバーレイ
-    const ui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, scene);
-    const fpsText = new BABYLON.GUI.TextBlock("fps");
-    fpsText.text = "FPS: --";
-    fpsText.color = "white";
-    fpsText.fontSize = 20;
-    fpsText.fontFamily = "monospace";
-    fpsText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    fpsText.verticalAlignment   = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-    fpsText.left = "12px";
-    fpsText.top  = "12px";
-    ui.addControl(fpsText);
-
+    let firstBefore = true;
+    let firstAfter  = true;
     let time = 0;
     scene.registerBeforeRender(() => {
+        if (firstBefore) {
+            perfLog("First registerBeforeRender (before shader compile+draw)");
+            firstBefore = false;
+        }
         time += 0.008;
         material.setFloat("time", time);
         material.setVector3("cameraPosition", camera.position);
-        fpsText.text = "FPS: " + Math.round(engine.getFps());
+    });
+
+    scene.registerAfterRender(() => {
+        if (firstAfter) {
+            perfLog("First registerAfterRender (shader compiled + first frame drawn)");
+            firstAfter = false;
+        }
     });
 
     return scene;

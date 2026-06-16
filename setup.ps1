@@ -97,6 +97,9 @@ if ($SkipNpm) {
     Push-Location $appsDir
     npm install
     if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Error "npm install に失敗しました。" }
+    # 物理演算サンプル用 Cannon.js
+    npm install cannon
+    if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Error "npm install cannon に失敗しました。" }
     Pop-Location
     Write-Host "  npm install 完了。" -ForegroundColor Green
 }
