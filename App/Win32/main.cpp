@@ -133,6 +133,19 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         }
         break;
 
+    case WM_KEYDOWN:
+        // Babylon Native does not expose keyboard input to JS, so forward the
+        // 'W' key to the scene via Runtime::Eval to toggle the physics
+        // wireframe. Ignore auto-repeat (lParam bit 30 = previous key state).
+        if (wParam == 'W' && (lParam & 0x40000000) == 0)
+        {
+            if (g_runtime)
+                g_runtime->Eval(
+                    "globalThis.toggleWireframe && globalThis.toggleWireframe();",
+                    "host://keydown");
+        }
+        break;
+
     case WM_DESTROY:
         Uninitialize();
         ::PostQuitMessage(0);
