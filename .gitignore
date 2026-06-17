@@ -10,6 +10,9 @@ build/
 *.ilk
 *.exp
 
+# Build / run logs
+*.log
+
 # エディタ
 .vs/
 .vscode/

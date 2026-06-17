@@ -18,7 +18,64 @@ function perfLog(label) {
 
 var PHYSICS_SCALE = 1 / 10;
 
+// Physics debug wireframe (matches original demo). Default ON.
+var showWireframe = true;
+var physicsViewer = null;
+var trackedBodies = [];
+
 perfLog("Script start");
+
+// Show a green wireframe of each physics shape via BABYLON.Debug.PhysicsViewer.
+// Bodies are created asynchronously (after GLTF load), so poll scene.meshes
+// each frame and register any new physicsBody exactly once.
+function setupPhysicsDebugWireframe(scene) {
+    if (!BABYLON.Debug || !BABYLON.Debug.PhysicsViewer) {
+        BABYLON.Tools.Warn("[Marbles] PhysicsViewer not available; wireframe disabled");
+        return;
+    }
+
+    physicsViewer = new BABYLON.Debug.PhysicsViewer(scene);
+    var seenBodies = new WeakSet();
+
+    scene.registerBeforeRender(function () {
+        scene.meshes.forEach(function (mesh) {
+            if (!mesh) {
+                return;
+            }
+            if (mesh.physicsBody && !seenBodies.has(mesh.physicsBody) && physicsViewer.showBody) {
+                seenBodies.add(mesh.physicsBody);
+                trackedBodies.push(mesh.physicsBody);
+                if (showWireframe) {
+                    physicsViewer.showBody(mesh.physicsBody);
+                }
+            }
+        });
+    });
+}
+
+// Show/hide the physics wireframe for all tracked bodies.
+function setWireframeVisible(visible) {
+    if (showWireframe === visible) {
+        return;
+    }
+    showWireframe = visible;
+    if (physicsViewer) {
+        trackedBodies.forEach(function (body) {
+            if (visible) {
+                physicsViewer.showBody(body);
+            } else {
+                physicsViewer.hideBody(body);
+            }
+        });
+    }
+    BABYLON.Tools.Log("[Marbles] wireframe " + (visible ? "ON" : "OFF"));
+}
+
+// Exposed for the C++ host: Babylon Native has no DOM keydown, so the Win32
+// host forwards the 'W' key via Runtime::Eval to toggle the wireframe.
+globalThis.toggleWireframe = function () {
+    setWireframeVisible(!showWireframe);
+};
 
 function base64ToArrayBuffer(b64) {
     var binaryString = atob(b64);
@@ -101,6 +158,8 @@ function createScene(engine, havok) {
     scene.enablePhysics(new BABYLON.Vector3(0, -9.8, 0), hk);
     perfLog("HavokPlugin enabled");
 
+    setupPhysicsDebugWireframe(scene);
+
     // Three-camera split viewport (matches original browser demo)
     var camera1 = new BABYLON.ArcRotateCamera("camera1", 0, Math.PI / 180 * 60, 30, BABYLON.Vector3.Zero(), scene);
     camera1.setTarget(BABYLON.Vector3.Zero());
@@ -178,6 +237,7 @@ function createScene(engine, havok) {
 
             if (sphereMeshes.length > 0) {
                 cameraTarget = sphereMeshes[0];
+                cameraTarget.showBoundingBox = true;
                 camera2.parent = cameraTarget;
             }
 
@@ -188,6 +248,7 @@ function createScene(engine, havok) {
             // Fallback to primitive spheres if GLTF loading fails
             createFallbackSpheres(scene, shadow, sphereMeshes, function (target) {
                 cameraTarget = target;
+                cameraTarget.showBoundingBox = true;
                 camera2.parent = cameraTarget;
             }, havok);
         });
